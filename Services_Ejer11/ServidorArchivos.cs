@@ -28,7 +28,7 @@ namespace Services_Ejer11
             {
                 using (StreamReader sr = new StreamReader(nombreArchivo))
                 {
-                    while (lineasLeidas <= nLineas)
+                    while (lineasLeidas <= nLineas) //o que llegue al final del archivo devuelve null o -1, comprobarlo
                     {
                         texto += sr.ReadLine();
                         texto += "\n";
