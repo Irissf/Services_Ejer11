@@ -2,13 +2,21 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Services_Ejer11
 {
     class ServidorArchivos
     {
+
+        private bool acabar = false;
+        private object llave = new object();
+
+
         /// <summary>
         /// leeArchivo(nombreArchivo, nLineas): Función que lee nLineas del archivo de texto indicado en el 
         /// parámetro nombreArchivo y las devuelve como string. Si el archivo es más corto que las líneas 
@@ -23,16 +31,26 @@ namespace Services_Ejer11
         public string LeeArchivo(string nombreArchivo, int nLineas)
         {
             string texto = "";
+            string linea = "";
             int lineasLeidas = 0;
+            bool salir = false;
             try
             {
                 using (StreamReader sr = new StreamReader(nombreArchivo))
                 {
-                    while (lineasLeidas <= nLineas) //o que llegue al final del archivo devuelve null o -1, comprobarlo
+                    while (lineasLeidas < nLineas && !salir) //o que llegue al final del archivo devuelve null o -1, comprobarlo
                     {
-                        texto += sr.ReadLine();
-                        texto += "\n";
-                        lineasLeidas++;
+                        linea = sr.ReadLine();
+                        if (linea != null)
+                        {
+                            texto += linea;
+                            texto += "\n";
+                            lineasLeidas++;
+                        }
+                        else
+                        {
+                            salir = true;
+                        }
                     }
                 }
 
@@ -53,7 +71,23 @@ namespace Services_Ejer11
         /// <returns></returns>
         public int LeePuerto()
         {
-            return 0;
+            int puerto = 31416;
+            using (StreamReader sr = new StreamReader(Environment.GetEnvironmentVariable("EXAMEN") + "/puerto.txt"))
+            {
+                try
+                {
+                    puerto = Convert.ToInt32(sr.ReadLine());
+                    //El puerto minimo es IPEndPoint.MinPort (0) pero yo voy a poner un mínimo de 10000
+                    if (puerto < 10000 || puerto > IPEndPoint.MaxPort)
+                    {
+                        puerto = 31416;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            return puerto;
         }
 
         /// <summary>
@@ -63,7 +97,10 @@ namespace Services_Ejer11
         /// <param name="numero"></param>
         public void GuardaPuerto(int numero)
         {
-
+            using (StreamWriter sw = new StreamWriter(Environment.GetEnvironmentVariable("EXAMEN") + "/puerto.txt"))
+            {
+                sw.WriteLine("" + numero);
+            }
         }
 
         /// <summary>
@@ -71,9 +108,22 @@ namespace Services_Ejer11
         /// y la devuelve como una cadena única(los nombres de los archivos separados por retornos de carro. No
         /// se incluye la trayectoria).
         /// </summary>
-        public void ListaArchivos()
+        public string ListaArchivos()
         {
+            String lista = "";
 
+            //Cogemos el directorio
+            DirectoryInfo directorio = new DirectoryInfo(Environment.GetEnvironmentVariable("EXAMEN"));
+            //Accedemos a los archivos del directorio
+            FileInfo[] archivos = directorio.GetFiles();
+            for (int i = 0; i < archivos.Length; i++)
+            {
+                if (archivos[i].Extension == ".txt")
+                {
+                    lista += archivos[i].Name.Remove(archivos[i].Name.Length - 4) + "\n";
+                }
+            }
+            return lista;
         }
 
         /// <summary>
@@ -87,7 +137,35 @@ namespace Services_Ejer11
         /// </summary>
         public void IniciaServidorArchivos()
         {
+            IPEndPoint ie = new IPEndPoint(IPAddress.Parse("127.0.0.1"), LeePuerto());
+            Socket socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                //Enlazamos el socket al puerto
+                socketServidor.Bind(ie);
+                Console.WriteLine("Puerto Conectado al: " + LeePuerto());
 
+                //Esperamos clientes
+                socketServidor.Listen(2);
+
+                //Hilo de los clientes
+
+                while (!acabar)
+                {
+                    //mientras no se de la orden de acabar
+
+                    //Aceptamos a un cliente y lo hilamos
+                    Socket socketCliente = socketServidor.Accept();
+                    Thread hilo = new Thread(HiloCliente);
+                    hilo.Start(socketCliente);
+                }
+
+            }
+            catch (SocketException e) when (e.ErrorCode == (int)SocketError.AddressAlreadyInUse)
+            {
+                Console.WriteLine("Puerto Ocupado");
+                socketServidor.Close();
+            }
         }
 
         /// <summary>
@@ -104,7 +182,50 @@ namespace Services_Ejer11
         /// <param name="socket"></param>
         public void HiloCliente(object socket)
         {
+            Socket socketCliente = (Socket)socket;
+            string accion = "";
 
+            int n = 0;
+            string archivo = "";
+            string recortar = "";
+            string definitivoN = "";
+
+            switch (accion.Remove(2))
+            {
+
+                //TODO recortar hasta el espacio
+                case "GET":
+                    //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
+                    //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
+                    //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
+                    try
+                    {
+                        for (int i = 0; i < accion.Length; i++)
+                        {
+                            recortar = accion.Substring(accion.IndexOf(","), accion.Length);
+                            if (accion[i] >= 0 && accion[i] <= 9)
+                            {
+                                definitivoN += accion[i];
+                            }
+                        }
+                        n = Convert.ToInt32(definitivoN);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
+                    break;
+                case "POR":
+                    break;
+                case "LIS":
+                    break;
+                case "CLO":
+                    break;
+                case "HAL":
+                    break;
+                default:
+                    break;
+            }
         }
 
         /*Se debe controlar que si se cierra el telnet de golpe que el servidor no falle.*/

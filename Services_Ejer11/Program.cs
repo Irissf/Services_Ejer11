@@ -29,9 +29,8 @@ namespace Services_Ejer11
             string ruta = Environment.GetEnvironmentVariable("EXAMEN");
             //Console.WriteLine("la ruta es:"+ruta);
             //Console.ReadLine();
-            
-            string resultado = sa.LeeArchivo(ruta+"/prueba.txt", 15);
-            Console.WriteLine(resultado);
+
+            sa.IniciaServidorArchivos();
             Console.ReadLine();
         }
     }
