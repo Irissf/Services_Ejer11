@@ -13,7 +13,12 @@ namespace Services_Ejer11
     class ServidorArchivos
     {
 
+        //Vamos a necesitar un lock para gestionar lo de desconectar el servido ............. FUCK
+        //Solo para gestionar la booleana del servidor, la del cliente es única de cada cliente
+        //ESTRUCTURA WHILE, LOCK, IF
+
         private bool acabar = false;
+        private bool clienteAcabar = false;
         private Socket socketServidor;
         private object llave = new object();
 
@@ -151,14 +156,20 @@ namespace Services_Ejer11
 
                 //Hilo de los clientes
 
+                
                 while (!acabar)
                 {
                     //mientras no se de la orden de acabar
-
-                    //Aceptamos a un cliente y lo hilamos
-                    Socket socketCliente = socketServidor.Accept();
-                    Thread hilo = new Thread(HiloCliente);
-                    hilo.Start(socketCliente);
+                    lock (llave)
+                    {
+                        if (!acabar)
+                        {
+                            //Aceptamos a un cliente y lo hilamos
+                            Socket socketCliente = socketServidor.Accept(); //sigue sin funcionar
+                            Thread hilo = new Thread(HiloCliente);
+                            hilo.Start(socketCliente);
+                        }
+                    }
                 }
 
             }
@@ -183,66 +194,95 @@ namespace Services_Ejer11
         /// <param name="socket"></param>
         public void HiloCliente(object socket)
         {
+
+            Console.WriteLine("Entro aqui");
+            clienteAcabar = false;
             Socket socketCliente = (Socket)socket;
             string accion = "";
 
-            int n = 0;
-            string[] cadenaPorEspacios = accion.Split(' '); /*divide la cadena por espacios que tenga,
-                                                  * de esa forma sacamos la primera palabra accediendo a la posicion 0*/
-            string[] cadenaPorComas = accion.Split(',');
+            string[] cadenaPorEspacios;
+            string[] cadenaPorComas;
+
+            //NullReferenceException no se capturan alguna variable apunta a null y no se captura
 
             using (NetworkStream ns = new NetworkStream(socketCliente))
             using (StreamReader sr = new StreamReader(ns))
             using (StreamWriter sw = new StreamWriter(ns))
             {
-
-                switch (cadenaPorEspacios[0])
+                sw.WriteLine("Cliente conectado");
+                sw.Flush();
+                // sw.AutoFlush = true; //con esto ya nos libramos de estar poniendo el flush
+                
+                while (!clienteAcabar)
                 {
+                    accion = sr.ReadLine();
+                    if (accion != null)
+                    {
+                        cadenaPorEspacios = accion.Split(' '); /*divide la cadena por espacios que tenga,
+                                                  * de esa forma sacamos la primera palabra accediendo a la posicion 0*/
+                        cadenaPorComas = accion.Split(',');
+                        switch (cadenaPorEspacios[0])
+                        {
 
-                    //TODO recortar hasta el espacio
-                    case "GET":
-                        //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
-                        //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
-                        //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
-                        try
-                        {
-                            int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
-                            LeeArchivo(cadenaPorEspacios[1], nLineas);
+                            //TODO recortar hasta el espacio
+                            case "GET":
+                                //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
+                                //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
+                                //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
+                                try
+                                {
+                                    int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
+                                    LeeArchivo(cadenaPorEspacios[1], nLineas);
+                                }
+                                catch (FormatException)
+                                {
+                                    //mensaje de datos incorrectos
+                                }
+                                catch (Exception)
+                                {
+                                    //mensaje de error
+                                }
+                                break;
+                            case "PORT":
+                                try
+                                {
+                                    GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
+                                }
+                                catch (FormatException)
+                                {
+                                    //mandamos algo por defecto¿?
+                                }
+                                //avisar si se guardó
+                                break;
+                            case "LIST":
+                                string ContenidoDelArchvio = ListaArchivos();
+                                //mostrar la cadena
+                                break;
+                            case "CLOSE":
+                                clienteAcabar = true;
+                                socketCliente.Close();
+                                break;
+                            case "HALT":
+                                
+                                Console.WriteLine("WEEE");
+                                lock (this)
+                                {
+                                    clienteAcabar = true;
+                                    acabar = true;
+                                    socketServidor.Close();
+                                }
+                                
+                                break;
+                            default:
+                                
+                                //acción no entendida
+                                break;
                         }
-                        catch (FormatException)
-                        {
-                            //mensaje de datos incorrectos
-                        }
-                        catch (Exception)
-                        {
-                            //mensaje de error
-                        }
-                        break;
-                    case "PORT":
-                        try
-                        {
-                            GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
-                        }
-                        catch (FormatException)
-                        {
-                            //mandamos algo por defecto¿?
-                        }
-                        //avisar si se guardó
-                        break;
-                    case "LIST":
-                        string ContenidoDelArchvio = ListaArchivos();
-                        //mostrar la cadena
-                        break;
-                    case "CLOSE":
-                        socketCliente.Close();
-                        break;
-                    case "HALT":
-                        socketServidor.Close();
-                        break;
-                    default:
-                        //acción no entendida
-                        break;
+                    }
+
+                    
                 }
+               
             }
 
         }

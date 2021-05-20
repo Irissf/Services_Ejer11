@@ -26,12 +26,11 @@ namespace Services_Ejer11
             /*En el programa principal que estará en la clase Program simplemente se crea un objeto del tipo Servidor y 
             se llama a la función iniciaServicioChat.*/
             ServidorArchivos sa = new ServidorArchivos();
-            string ruta = Environment.GetEnvironmentVariable("EXAMEN");
+            //string ruta = Environment.GetEnvironmentVariable("EXAMEN");
             //Console.WriteLine("la ruta es:"+ruta);
             //Console.ReadLine();
 
             sa.IniciaServidorArchivos();
-            Console.ReadLine();
         }
     }
 }
