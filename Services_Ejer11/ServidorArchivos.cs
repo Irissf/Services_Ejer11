@@ -14,6 +14,7 @@ namespace Services_Ejer11
     {
 
         private bool acabar = false;
+        private Socket socketServidor;
         private object llave = new object();
 
 
@@ -138,7 +139,7 @@ namespace Services_Ejer11
         public void IniciaServidorArchivos()
         {
             IPEndPoint ie = new IPEndPoint(IPAddress.Parse("127.0.0.1"), LeePuerto());
-            Socket socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            socketServidor = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             try
             {
                 //Enlazamos el socket al puerto
@@ -186,46 +187,64 @@ namespace Services_Ejer11
             string accion = "";
 
             int n = 0;
-            string archivo = "";
-            string recortar = "";
-            string definitivoN = "";
+            string[] cadenaPorEspacios = accion.Split(' '); /*divide la cadena por espacios que tenga,
+                                                  * de esa forma sacamos la primera palabra accediendo a la posicion 0*/
+            string[] cadenaPorComas = accion.Split(',');
 
-            switch (accion.Remove(2))
+            using (NetworkStream ns = new NetworkStream(socketCliente))
+            using (StreamReader sr = new StreamReader(ns))
+            using (StreamWriter sw = new StreamWriter(ns))
             {
 
-                //TODO recortar hasta el espacio
-                case "GET":
-                    //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
-                    //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
-                    //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
-                    try
-                    {
-                        for (int i = 0; i < accion.Length; i++)
-                        {
-                            recortar = accion.Substring(accion.IndexOf(","), accion.Length);
-                            if (accion[i] >= 0 && accion[i] <= 9)
-                            {
-                                definitivoN += accion[i];
-                            }
-                        }
-                        n = Convert.ToInt32(definitivoN);
-                    }
-                    catch (Exception)
-                    {
+                switch (cadenaPorEspacios[0])
+                {
 
-                    }
-                    break;
-                case "POR":
-                    break;
-                case "LIS":
-                    break;
-                case "CLO":
-                    break;
-                case "HAL":
-                    break;
-                default:
-                    break;
+                    //TODO recortar hasta el espacio
+                    case "GET":
+                        //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
+                        //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
+                        //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
+                        try
+                        {
+                            int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
+                            LeeArchivo(cadenaPorEspacios[1], nLineas);
+                        }
+                        catch (FormatException)
+                        {
+                            //mensaje de datos incorrectos
+                        }
+                        catch (Exception)
+                        {
+                            //mensaje de error
+                        }
+                        break;
+                    case "PORT":
+                        try
+                        {
+                            GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
+                        }
+                        catch (FormatException)
+                        {
+                            //mandamos algo por defecto¿?
+                        }
+                        //avisar si se guardó
+                        break;
+                    case "LIST":
+                        string ContenidoDelArchvio = ListaArchivos();
+                        //mostrar la cadena
+                        break;
+                    case "CLOSE":
+                        socketCliente.Close();
+                        break;
+                    case "HALT":
+                        socketServidor.Close();
+                        break;
+                    default:
+                        //acción no entendida
+                        break;
+                }
             }
+
         }
 
         /*Se debe controlar que si se cierra el telnet de golpe que el servidor no falle.*/
