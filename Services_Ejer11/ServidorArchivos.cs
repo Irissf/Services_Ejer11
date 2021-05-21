@@ -42,7 +42,7 @@ namespace Services_Ejer11
             bool salir = false;
             try
             {
-                using (StreamReader sr = new StreamReader(nombreArchivo))
+                using (StreamReader sr = new StreamReader(Environment.GetEnvironmentVariable("EXAMEN")+"/"+nombreArchivo))
                 {
                     while (lineasLeidas < nLineas && !salir) //o que llegue al final del archivo devuelve null o -1, comprobarlo
                     {
@@ -63,7 +63,7 @@ namespace Services_Ejer11
             }
             catch (Exception)
             {
-                Console.WriteLine("No se encontró el archivo en: " + nombreArchivo);
+                return("No se encontró el archivo en: " + nombreArchivo);
             }
 
             return texto;
@@ -162,12 +162,21 @@ namespace Services_Ejer11
                     //mientras no se de la orden de acabar
                     lock (llave)
                     {
+                        
                         if (!acabar)
                         {
                             //Aceptamos a un cliente y lo hilamos
-                            Socket socketCliente = socketServidor.Accept(); //sigue sin funcionar
-                            Thread hilo = new Thread(HiloCliente);
-                            hilo.Start(socketCliente);
+                            try
+                            {
+                                Socket socketCliente = socketServidor.Accept(); //sigue sin funcionar
+                                Thread hilo = new Thread(HiloCliente);
+                                hilo.Start(socketCliente);
+                            }
+                            catch (SocketException)
+                            {
+                                //cuando cerramos el servidor aun sigue quedando en esa linea del Accept, y lanza una excenpción, solo es necesario controlarla
+                            }
+                            
                         }
                     }
                 }
@@ -210,8 +219,8 @@ namespace Services_Ejer11
             using (StreamWriter sw = new StreamWriter(ns))
             {
                 sw.WriteLine("Cliente conectado");
-                sw.Flush();
-                // sw.AutoFlush = true; //con esto ya nos libramos de estar poniendo el flush
+                //sw.Flush();
+                sw.AutoFlush = true; //con esto ya nos libramos de estar poniendo el flush
                 
                 while (!clienteAcabar)
                 {
@@ -232,15 +241,16 @@ namespace Services_Ejer11
                                 try
                                 {
                                     int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
-                                    LeeArchivo(cadenaPorEspacios[1], nLineas);
+                                    string mensaje = LeeArchivo(cadenaPorEspacios[1], nLineas);
+                                    sw.WriteLine(mensaje);
                                 }
                                 catch (FormatException)
                                 {
-                                    //mensaje de datos incorrectos
+                                    sw.WriteLine("Formato incorrecto: debe ser GET nombre_archivo,nlineas");
                                 }
-                                catch (Exception)
+                                catch (Exception e)
                                 {
-                                    //mensaje de error
+                                    sw.WriteLine("Error:"+ e.Message);
                                 }
                                 break;
                             case "PORT":
@@ -263,8 +273,6 @@ namespace Services_Ejer11
                                 socketCliente.Close();
                                 break;
                             case "HALT":
-                                
-                                Console.WriteLine("WEEE");
                                 lock (this)
                                 {
                                     clienteAcabar = true;
