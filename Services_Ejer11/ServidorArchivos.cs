@@ -207,8 +207,11 @@ namespace Services_Ejer11
             Console.WriteLine("Entro aqui");
             clienteAcabar = false;
             Socket socketCliente = (Socket)socket;
-            string accion = "";
+            //para la info del puerto del cliente
+            IPEndPoint infoCLiente = (IPEndPoint)socketCliente.RemoteEndPoint;
+            
 
+            string accion = "";
             string[] cadenaPorEspacios;
             string[] cadenaPorComas;
 
@@ -218,7 +221,7 @@ namespace Services_Ejer11
             using (StreamReader sr = new StreamReader(ns))
             using (StreamWriter sw = new StreamWriter(ns))
             {
-                sw.WriteLine("Cliente conectado");
+                sw.WriteLine("Cliente conectado al puerto :"+infoCLiente.Port+" Con dirección: "+infoCLiente.Address);
                 //sw.Flush();
                 sw.AutoFlush = true; //con esto ya nos libramos de estar poniendo el flush
                 
@@ -228,20 +231,19 @@ namespace Services_Ejer11
                     if (accion != null)
                     {
                         cadenaPorEspacios = accion.Split(' '); /*divide la cadena por espacios que tenga,
-                                                  * de esa forma sacamos la primera palabra accediendo a la posicion 0*/
-                        cadenaPorComas = accion.Split(',');
+                                                  * de esa forma sacamos la primera palabra accediendo a la posicion 0
+                                                  Separamos la instruccion de los parámetros*/    
+                        
                         switch (cadenaPorEspacios[0])
                         {
 
-                            //TODO recortar hasta el espacio
                             case "GET":
-                                //TODO analizar si cumple el patron de GET archivo,n si no es el caso lanzar mensaje
-                                //a partir de la coma cogemos el número, y de la coma hacia atras omitiendo el get pillams el archivo
-                                //TODO archivo substring dividir en dos la cadena, de coma para alla y para aca, y el de para acá un substring de 3 que acba get hasta final que seria antes de coma 
+         
                                 try
                                 {
+                                    cadenaPorComas = cadenaPorEspacios[1].Split(',');
                                     int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
-                                    string mensaje = LeeArchivo(cadenaPorEspacios[1], nLineas);
+                                    string mensaje = LeeArchivo(cadenaPorComas[0], nLineas);
                                     sw.WriteLine(mensaje);
                                 }
                                 catch (FormatException)
@@ -256,16 +258,21 @@ namespace Services_Ejer11
                             case "PORT":
                                 try
                                 {
-                                    GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
+                                    if (cadenaPorEspacios.Length >= 1)
+                                    {
+                                        GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
+                                        sw.WriteLine("Puerto guardado");
+                                    }
                                 }
                                 catch (FormatException)
                                 {
-                                    //mandamos algo por defecto¿?
+                                    sw.WriteLine("Formato incorrecto");
                                 }
                                 //avisar si se guardó
                                 break;
                             case "LIST":
                                 string ContenidoDelArchvio = ListaArchivos();
+                                sw.WriteLine(ContenidoDelArchvio);
                                 //mostrar la cadena
                                 break;
                             case "CLOSE":
