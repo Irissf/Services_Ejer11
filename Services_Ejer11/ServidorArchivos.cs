@@ -105,7 +105,7 @@ namespace Services_Ejer11
         {
             using (StreamWriter sw = new StreamWriter(Environment.GetEnvironmentVariable("EXAMEN") + "/puerto.txt"))
             {
-                sw.WriteLine("" + numero);
+                sw.WriteLine(numero);
             }
         }
 
@@ -275,6 +275,10 @@ namespace Services_Ejer11
                                 {
                                     sw.WriteLine("Formato incorrecto");
                                 }
+                                catch (OverflowException)
+                                {
+                                    sw.WriteLine("Número demasiado grande");
+                                }
                                 //avisar si se guardó
                                 break;
                             case "LIST":
@@ -287,7 +291,7 @@ namespace Services_Ejer11
                                 socketCliente.Close();
                                 break;
                             case "HALT":
-                                lock (this)
+                                lock (llave)
                                 {
                                     clienteAcabar = true;
                                     acabar = true;
