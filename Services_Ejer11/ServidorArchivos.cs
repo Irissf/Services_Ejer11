@@ -214,6 +214,7 @@ namespace Services_Ejer11
             string accion = "";
             string[] cadenaPorEspacios;
             string[] cadenaPorComas;
+            string cadenaParametros = "";
 
             //NullReferenceException no se capturan alguna variable apunta a null y no se captura
 
@@ -232,7 +233,12 @@ namespace Services_Ejer11
                     {
                         cadenaPorEspacios = accion.Split(' '); /*divide la cadena por espacios que tenga,
                                                   * de esa forma sacamos la primera palabra accediendo a la posicion 0
-                                                  Separamos la instruccion de los parámetros*/    
+                                                  Separamos la instruccion de los parámetros*/
+                        cadenaParametros = "";
+                        for (int i = 1; i < cadenaPorEspacios.Length; i++)
+                        {
+                            cadenaParametros += cadenaPorEspacios[i];
+                        }
                         
                         switch (cadenaPorEspacios[0])
                         {
@@ -241,9 +247,10 @@ namespace Services_Ejer11
          
                                 try
                                 {
-                                    cadenaPorComas = cadenaPorEspacios[1].Split(',');
+                                    //separamos lo de después de la coma y lo de antes de la coma
+                                    cadenaPorComas = cadenaParametros.Split(',');
                                     int nLineas = Convert.ToInt32(cadenaPorComas[cadenaPorComas.Length - 1]);
-                                    string mensaje = LeeArchivo(cadenaPorComas[0], nLineas);
+                                    string mensaje = LeeArchivo(cadenaPorComas[0].Trim(), nLineas);
                                     sw.WriteLine(mensaje);
                                 }
                                 catch (FormatException)
@@ -258,9 +265,9 @@ namespace Services_Ejer11
                             case "PORT":
                                 try
                                 {
-                                    if (cadenaPorEspacios.Length >= 1)
+                                    if (cadenaPorEspacios.Length > 0)
                                     {
-                                        GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[1]));
+                                        GuardaPuerto(Convert.ToInt32(cadenaPorEspacios[cadenaPorEspacios.Length-1]));
                                         sw.WriteLine("Puerto guardado");
                                     }
                                 }
@@ -289,7 +296,7 @@ namespace Services_Ejer11
                                 
                                 break;
                             default:
-                                
+                                sw.WriteLine("Comando desconocido");
                                 //acción no entendida
                                 break;
                         }
